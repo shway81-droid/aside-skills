@@ -16,11 +16,11 @@ description: "K-에듀파인 문서등록대장에서 생산문서를 기안자�
 예시 매핑:
 
 ```text
-최연미 (교무기획부 전반)        -> 교무기획부
-김덕미 (늘봄학교 돌봄)          -> 늘봄학교-돌봄
-김기하 (늘봄학교 방과후)        -> 늘봄학교-방과후
-김목   (연구기획부 연구기획 등) -> 연구기획부
-박형남 (연구기획부 정보 등)     -> 연구기획부-정보
+최○○ (교무기획부 전반)        -> 교무기획부
+김○○ (늘봄학교 돌봄)          -> 늘봄학교-돌봄
+이○○ (늘봄학교 방과후)        -> 늘봄학교-방과후
+박○○ (연구기획부 연구기획 등) -> 연구기획부
+정○○ (연구기획부 정보 등)     -> 연구기획부-정보
 ```
 
 대상 인원을 사용자에게 확인한 뒤, 기안자명으로 임시 폴더와 12개 월별 하위 폴더를 만든다. 월 폴더명은 `3월`~`12월`, 연도가 바뀌면 `2026년 1월` 형식으로 구분한다.
@@ -74,7 +74,7 @@ PC저장 버튼은 `a[onclick*="doCallFileManagerExtra"]`. 클릭하면 별도 �
 
 # PC저장 클릭 후 실행
 & '<skill-dir>\scripts\save_month.ps1' `
-  -Destination 'C:\Users\User\Desktop\업무파악\김목\3월' `
+  -Destination 'C:\Users\User\Desktop\업무파악\박○○\3월' `
   -Expected 27 `
   -StartFile '<tmp>\download-start.txt'
 ```
@@ -86,7 +86,7 @@ PC저장 버튼은 `a[onclick*="doCallFileManagerExtra"]`. 클릭하면 별도 �
 전체 다운로드 검증 후 기안자명 폴더를 업무부서명으로 바꾼다.
 
 ```powershell
-Rename-Item -LiteralPath 'C:\Users\User\Desktop\업무파악\김목' -NewName '연구기획부'
+Rename-Item -LiteralPath 'C:\Users\User\Desktop\업무파악\박○○' -NewName '연구기획부'
 ```
 
 탐색기가 해당 폴더나 하위 폴더를 열고 있으면 접근 거부가 발생한다. `Shell.Application`으로 창을 닫고 2~3초 대기 후 재시도한다.
@@ -114,7 +114,7 @@ $files = Get-ChildItem -LiteralPath $path -File
 $body = @($files | Where-Object { $_.Name -match '\(본문\)' }).Count
 ```
 
-누락이 의심되면 목록의 문서번호와 저장된 파일명의 문서번호를 대조한다. 파일명은 `(해제남초등학교-2759 (본문)) 제목.pdf` 형식이다.
+누락이 의심되면 목록의 문서번호와 저장된 파일명의 문서번호를 대조한다. 파일명은 `(○○초등학교-2759 (본문)) 제목.pdf` 형식이다.
 
 ## 사용자 작업 간섭
 
