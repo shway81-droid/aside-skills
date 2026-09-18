@@ -11,16 +11,47 @@ description: "K-에듀파인 문서등록대장에서 생산문서를 기안자�
 
 ## 1단계: 업무분장표 확인 및 폴더 생성
 
-업무분장표(PDF/HWP)에서 부서, 계, 담당자를 매칭한다. 한 담당자가 여러 계를 겸하는 경우가 많으므로 폴더명은 부서 단위로 정하되, 같은 부서에 여러 담당자가 있으면 `부서-계` 형태로 구분한다.
+### 업무분장표 입수
+
+**파일을 직접 찾아 헤매지 않는다.** 사용자가 바탕 화면에 폴더를 만들어 업무분장표를 넣어두고 폴더명을 알려주는 방식으로 진행한다. 폴더명을 받지 못했으면 먼저 물어본다.
+
+```powershell
+$dir = "$env:USERPROFILE\Desktop\<사용자가 알려준 폴더명>"
+Get-ChildItem -LiteralPath $dir -File | Select-Object Name, Length, LastWriteTime
+```
+
+세션 루트 밖 경로는 REPL의 `fs`로 읽을 수 없다(`Path escapes Project and session roots`). 바탕 화면 파일은 반드시 PowerShell로 다룬다.
+
+확장자별 읽는 법:
+
+- **hwpx**: 실체가 zip이다. 복사 → `Expand-Archive` → `Contents\section0.xml`에서 태그를 제거하면 표 내용이 순서대로 나온다.
+- **pdf**: `pdf` 스킬
+- **xlsx**: `xlsx` 스킬
+- **hwp(구형 바이너리)**: 텍스트 추출이 어렵다. 사용자에게 hwpx나 PDF로 다시 저장해달라고 요청한다.
+
+```powershell
+$zip = "$env:TEMP\bunjang.zip"; $out = "$env:TEMP\bunjang"
+Copy-Item $src $zip -Force
+if (Test-Path $out) { Remove-Item $out -Recurse -Force }
+Expand-Archive $zip -DestinationPath $out -Force
+$xml = Get-ChildItem $out -Recurse -Filter 'section0.xml' | Select-Object -First 1
+((Get-Content $xml.FullName -Raw) -replace '<[^>]+>', ' ' -replace '\s+', ' ')
+```
+
+분장표가 아예 없으면 K-에듀파인 자체에서 조달한다. 문서등록대장에서 제목 `업무분장`으로 검색해 해당 기안문의 첨부를 받으면 된다. 어차피 아카이빙하러 들어가는 화면이라 추가 비용이 거의 없고, PC가 바뀌어도 통하는 유일한 경로다.
+
+### 매칭
+
+추출한 `부서 / 계 / 담당자` 표로 매칭한다. 한 담당자가 여러 계를 겸하는 경우가 많으므로 폴더명은 부서 단위로 정하되, 같은 부서에 여러 담당자가 있으면 `부서-계` 형태로 구분한다.
 
 예시 매핑:
 
 ```text
-최○○ (교무기획부 전반)        -> 교무기획부
-김○○ (늘봄학교 돌봄)          -> 늘봄학교-돌봄
-이○○ (늘봄학교 방과후)        -> 늘봄학교-방과후
-박○○ (연구기획부 연구기획 등) -> 연구기획부
-정○○ (연구기획부 정보 등)     -> 연구기획부-정보
+최연미 (교무기획부 전반)        -> 교무기획부
+김덕미 (늘봄학교 돌봄)          -> 늘봄학교-돌봄
+김기하 (늘봄학교 방과후)        -> 늘봄학교-방과후
+김목   (연구기획부 연구기획 등) -> 연구기획부
+박형남 (연구기획부 정보 등)     -> 연구기획부-정보
 ```
 
 대상 인원을 사용자에게 확인한 뒤, 기안자명으로 임시 폴더와 12개 월별 하위 폴더를 만든다. 월 폴더명은 `3월`~`12월`, 연도가 바뀌면 `2026년 1월` 형식으로 구분한다.
@@ -74,7 +105,7 @@ PC저장 버튼은 `a[onclick*="doCallFileManagerExtra"]`. 클릭하면 별도 �
 
 # PC저장 클릭 후 실행
 & '<skill-dir>\scripts\save_month.ps1' `
-  -Destination 'C:\Users\User\Desktop\업무파악\박○○\3월' `
+  -Destination 'C:\Users\User\Desktop\업무파악\김목\3월' `
   -Expected 27 `
   -StartFile '<tmp>\download-start.txt'
 ```
@@ -86,7 +117,7 @@ PC저장 버튼은 `a[onclick*="doCallFileManagerExtra"]`. 클릭하면 별도 �
 전체 다운로드 검증 후 기안자명 폴더를 업무부서명으로 바꾼다.
 
 ```powershell
-Rename-Item -LiteralPath 'C:\Users\User\Desktop\업무파악\박○○' -NewName '연구기획부'
+Rename-Item -LiteralPath 'C:\Users\User\Desktop\업무파악\김목' -NewName '연구기획부'
 ```
 
 탐색기가 해당 폴더나 하위 폴더를 열고 있으면 접근 거부가 발생한다. `Shell.Application`으로 창을 닫고 2~3초 대기 후 재시도한다.
@@ -98,12 +129,13 @@ Rename-Item -LiteralPath 'C:\Users\User\Desktop\업무파악\박○○' -NewName
 **비전자문서**: 종이문서로 등록되어 전자 본문이 없다. 목록에서 `비전자문서` 아이콘으로 식별한다. 체크는 되지만 저장 단계에서 제외된다. 근무상황부, 자원봉사활동대장 등 서식/대장류가 해당하며 학년도 말에 몰려 있다.
 
 ```js
+// alt 값은 `비전자문서` 외에 `비전자문서/첨부`, `비전자문서/열람제한` 같은 변형이 있으므로 부분 일치로 집계한다
 const nonElec = await frame.locator('img[alt^="비전자문서"]').count();
 ```
 
 **열람 권한 없는 문서**: 로그인 계정 권한 밖의 문서. 인사, 성과상여금, 범죄경력조회 같은 민감 문서가 해당한다. 교무부장 등 인사 담당자 문서에서 많이 발생한다.
 
-예상 건수는 `총 건수 - 비전자문서 수`로 잡되, 권한 제한분만큼 더 적게 저장될 수 있다. 미달을 오류로 처리하지 말고 그대로 진행한다.
+예상 건수는 **`전체선택 후 실제로 체크된 문서 수 - 비전자문서 수`**로 계산한다. 열람 권한이 없는 문서는 `#chkAll`을 눌러도 체크가 안 되므로, 목록 총 건수로 잡으면 어긋난다. 그래도 미달이 날 수 있으니 오류로 처리하지 말고 그대로 진행한다.
 
 ## 검증
 
@@ -114,7 +146,7 @@ $files = Get-ChildItem -LiteralPath $path -File
 $body = @($files | Where-Object { $_.Name -match '\(본문\)' }).Count
 ```
 
-누락이 의심되면 목록의 문서번호와 저장된 파일명의 문서번호를 대조한다. 파일명은 `(○○초등학교-2759 (본문)) 제목.pdf` 형식이다.
+누락이 의심되면 목록의 문서번호와 저장된 파일명의 문서번호를 대조한다. 파일명은 `(해제남초등학교-2759 (본문)) 제목.pdf` 형식이다.
 
 ## 사용자 작업 간섭
 
