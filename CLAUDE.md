@@ -52,6 +52,12 @@ PR은 지울 수 없습니다. 2026-09-17에 이 방식으로 처리했다가 �
 
 순서: 직접 커밋 → 필요하면 그 뒤에 이력 정리.
 
+## 진행 중인 작업
+
+- **PowerShell 단독 프로그램** — Aside 없이 누구나 실행하는 버전. 계획과 첫 요청문은
+  [`docs/kedufine-powershell-plan.md`](docs/kedufine-powershell-plan.md). K-에듀파인이 Windows
+  전용이라 Windows PC에서 진행합니다.
+
 ## 함께 쓰는 스킬
 
 - [upmu-pahak](https://github.com/shway81-droid/upmu-pahak) — 이 스킬로 내려받은
